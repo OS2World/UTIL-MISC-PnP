@@ -1,0 +1,10 @@
+BIOS_PNP.SYM symbol table file for BIOS_PNP.SYS (debug only)
+BIOS_PNP.SYS make protect mode BIOS calls possible (pnp32_o.exe)
+PNP.DOC original documentation
+PNP014VK.TXT description of ported version
+PNP32_D.BAT called by pnp32_d.cmd
+PNP32_D.CMD use DOS version under OS/2 (no UMB)
+PNP32_D.EXE DOS version of PnP scanner
+PNP32_O.EXE OS/2 version of PnP scanner
+PNPID.TXT database of PnP/EISA hardware
+WDOSXLE.EXE DOS extender, used by PNP32_D.EXE

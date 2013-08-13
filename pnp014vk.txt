@@ -1,0 +1,28 @@
+PnP 0.14vk is a port of PnP / Craig Hart
+done by Veit Kannegieser for OS/2 and DOS using VP 2.1
+
+differences:
+  * Uses 16-Bit protected mode PnP BIOS interface 
+    (SystemSoft bios returns bad values and corrupt buffers
+     for real mode..)
+
+    pnp32_d.exe - DOS (DPMI) Version
+                  needs no driver, but access to shadow RAM
+
+    pnp32_o.exe - OS/2 Version
+                  needs device=PNP_BIOS.SYS installed
+    
+  * puffer size problems solved
+  * loads id table at start
+  * uses classes.pas, .. from pci program
+  * added lines to pnpid.txt
+
+Current version if compiled with a lot of extra debuginfo and error
+handling. Please report bugs of this version to Veit.Kannegieser@gmx.de.
+
+If you have problems running the DPMI version under a memory manger
+or in a DOS session make sure the entire ROM area is visible (no upper memory)
+and accessible. If not possible, try plain DOS.
+You should be award that running this program could risk a system hang,
+to be safer close other programs and flush disk cache...
+
