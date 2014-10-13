@@ -1,0 +1,3 @@
+@ECHO OFF
+rem ALP +Od -Mb +Sfs L3L2.ALP
+ALP -Mb +Sfs L3L2.ALP

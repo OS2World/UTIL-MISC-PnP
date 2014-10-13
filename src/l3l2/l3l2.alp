@@ -1,0 +1,111 @@
+                .386
+
+                EXTRN DosFlatToSel:Proc
+
+;лллллллллллллллллллллллллллллллллллллллллллллллллллллллллллллллллллл
+
+IO16            segment dword public use16 'CODE'
+                assume cs:IO16
+
+                public call_level2
+call_level2     proc far
+                push dx
+                  push cx
+
+                    cld
+                    sub cx,2
+                    mov dx,cx
+                    add dx,cx
+
+                    sub sp,040h ; Systemsoft..
+
+      @push_stack:
+                    lodsw
+                    push ax
+                    loop @push_stack
+
+                    call dword ptr [si]
+
+                    add sp,dx
+
+                    add sp,040h ; Systemsoft..
+
+                  pop cx
+                pop dx
+                retf
+call_level2     endp
+
+IO16            ends
+
+;лллллллллллллллллллллллллллллллллллллллллллллллллллллллллллллллллллл
+
+CODE16          segment dword public use16 'CODE'
+                assume cs:CODE16
+
+pl3_pl2         proc far
+                db 066h
+                jmp far ptr weiter
+  weiter:
+                db 09ah
+                dd call_level2
+
+                db 066h
+                retf
+pl3_pl2         endp
+
+CODE16          ends
+
+;лллллллллллллллллллллллллллллллллллллллллллллллллллллллллллллллллллл
+
+CODE32          segment dword public use32 'CODE'
+                assume cs:CODE32
+
+                public goto_32_16
+goto_32_16      proc near pascal,
+                parameter_array:dword,
+                parameter_count:word
+
+                push ds
+                  push esi
+                    push ecx
+                      push edx
+
+                        mov edx,esp
+
+                        cmp sp,8*1024
+                        jae stack_weit_genug_weg_von_64K
+                        sub sp,sp
+  stack_weit_genug_weg_von_64K:
+                        mov eax,esp
+                        Call DosFlatToSel
+
+                        lds si,[parameter_array]
+                        mov cx,[parameter_count]
+
+                        push eax
+
+                        lss sp,[esp]
+                        and esp,0ffffh
+
+                        push es
+                        push edx
+
+                        db 09ah
+                        df pl3_pl2
+
+                        lss esp,[esp]
+
+                      pop edx
+                    pop ecx
+                  pop esi
+                pop ds
+                ret
+goto_32_16      endp
+
+
+CODE32          ends
+
+;лллллллллллллллллллллллллллллллллллллллллллллллллллллллллллллллллллл
+
+                end
+

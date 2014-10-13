@@ -1,0 +1,173 @@
+; OS/2 -> PROT MODE PNP Call
+; V.K. 2001.06.23..2001.07.18
+
+.386p
+
+;ЫЫЫЫЫЫЫЫЫЫЫЫЫЫЫЫЫЫЫЫЫЫЫЫЫЫЫЫЫЫЫЫЫЫЫЫЫЫЫЫЫЫЫЫЫЫЫЫЫЫЫЫЫЫЫЫЫЫЫЫЫЫЫЫЫЫЫЫ
+
+data                    segment 'DATA' use16
+                        dd -1
+                        dw 08000h+1*080h ; Zeichen-Ger„t+IOCtl2
+                        dw strategie_behandlung
+                        dw -1 ; IDC
+                        db 'BIOS$PNP'
+                        dw 8 dup (0)
+                        dd 0
+
+tabelle_Befehle:        dw 2
+                          dw offset befehl_Init
+                          db 0
+                          dw offset befehl_IOCtl
+                          db 16
+                        dw offset unbekannt
+
+tabelle_Kategorie       dw 1
+                          dw offset Kategorie_80
+                          db 080h
+                        dw offset unbekannt
+
+
+tabelle_K80_Funktionen: dw 1
+                          dw offset Funktion_80_PhysToUVirt
+                          db 0
+                        dw unbekannt
+
+Anforderungspaket struc
+  Laenge                db ?
+                        db ? ; Block_Device_Unit_Code
+  Befehl                db ?
+  Status                dw ?
+                        dd ? ; Reserved
+                        dd ? ; Queue Linkage
+  Kategorie             db ?
+  Funktion              db ?
+  Parameter_Adresse     dd ?
+  Daten_Adresse         dd ?
+                        dw ? ; System File Number
+  Parameter_Laenge      dw ?
+  Daten_Laenge          dw ?
+Anforderungspaket ends
+
+
+
+dev_help:               dd ?
+
+data_ende:
+data                    ends
+
+;ЫЫЫЫЫЫЫЫЫЫЫЫЫЫЫЫЫЫЫЫЫЫЫЫЫЫЫЫЫЫЫЫЫЫЫЫЫЫЫЫЫЫЫЫЫЫЫЫЫЫЫЫЫЫЫЫЫЫЫЫЫЫЫЫЫЫЫЫ
+
+code                    segment 'CODE' use16
+                        assume cs:code,ds:data
+
+a_proc                  macro FN
+                        &FN Proc
+                        public &FN
+                        EndM
+
+a_endp                  macro FN
+                        &FN EndP
+                        EndM
+
+
+                        ;--------------------------------------------
+                        ;
+a_proc                  Funktion_80_PhysToUVirt
+                        push gs
+                          lgs si,es:Anforderungspaket[bx].Parameter_Adresse
+                          push es
+                            push bx
+                              mov ax,gs:[si]
+                              mov bx,gs:[si+2]
+                              mov cx,gs:[si+4]
+                              mov dh,gs:[si+6]
+                              mov dl,017h     ; PhysToUVirt
+                              ;mov si,si
+                              call dword ptr [dev_help]
+                              mov dx,bx
+                              shl edx,16
+                              mov dx,es
+                              mov ax,0          ; no error
+                            pop bx
+                          pop es
+                          jnc Funktion_80_PhysToUVirt_kein_fehler
+
+                          sub edx,edx           ; sel:ofs=nil
+                          mov ax,(31 or 00400h) ; driver defined error
+
+  Funktion_80_PhysToUVirt_kein_fehler:
+                          mov Dword Ptr gs:[si+7],edx
+                        pop gs
+                        ret
+a_endp                  Funktion_80_PhysToUVirt
+                        ;--------------------------------------------
+
+                        ;********************************************
+
+a_proc                  Kategorie_80
+                        mov al,es:Anforderungspaket[bx].Funktion
+                        mov si,offset tabelle_K80_Funktionen
+                        jmp verteiler8
+a_endp                  Kategorie_80
+
+                        ;********************************************
+a_proc                  strategie_behandlung
+                        mov al,es:Anforderungspaket[bx].Befehl
+                        mov si,offset tabelle_Befehle
+                        call verteiler8
+                        or ax,00100h            ; done
+                        mov es:Anforderungspaket[bx].Status,ax
+                        retf
+a_endp                  strategie_behandlung
+
+                        ;--------------------------------------------
+a_proc                  befehl_Init
+                        mov     eax,es:[bx+14]
+                        mov     dword ptr [dev_help],eax
+                        mov     word ptr es:[bx+14],offset code:code_ende
+                        mov     word ptr es:[bx+16],offset data:data_ende
+                        sub     ax,ax
+                        ret
+a_endp                  befehl_Init
+                        ;--------------------------------------------
+a_proc                  befehl_IOCtl
+                        mov al,es:Anforderungspaket[bx].Kategorie
+                        mov si,offset tabelle_Kategorie
+                        jmp verteiler8
+a_endp                  befehl_IOCtl
+                        ;--------------------------------------------
+a_proc                  unbekannt
+                        mov ax,08013h
+                        ret
+a_endp                  unbekannt
+                        ;--------------------------------------------
+
+                        ;********************************************
+
+                        ;--------------------------------------------
+a_proc                  verteiler8
+                        push cx
+                          mov cx,[si]
+                          add si,2
+                          jcxz verteiler8_standardfall
+  verteiler8_schleife:
+                          cmp [si+2],al
+                          je verteiler8_gleichheit
+
+                          add si,2+1
+                          loop verteiler8_schleife
+  verteiler8_gleichheit:
+  verteiler8_standardfall:
+                        pop cx
+                        jmp word ptr [si+0]
+a_endp                  verteiler8
+                        ;--------------------------------------------
+
+
+code_ende:
+code                    ends
+
+;ЫЫЫЫЫЫЫЫЫЫЫЫЫЫЫЫЫЫЫЫЫЫЫЫЫЫЫЫЫЫЫЫЫЫЫЫЫЫЫЫЫЫЫЫЫЫЫЫЫЫЫЫЫЫЫЫЫЫЫЫЫЫЫЫЫЫЫЫ
+
+                        end
+
